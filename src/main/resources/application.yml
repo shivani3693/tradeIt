@@ -1,0 +1,27 @@
+# App configurations
+server:
+ port: 3000
+
+# H2 Database configurations
+spring:
+ datasource:
+  #url:jdbc:h2:file:~/database/tradeit
+  url: jdbc:h2:mem:tradeit
+ mvc:
+  pathmatch:
+   matching-strategy: ant_path_matcher
+
+
+logging:
+ level:
+  tradeit.shivani.shah.stocks: DEBUG
+  
+api:
+ host:
+  baseurl: https://www.alphavantage.co/query
+  key: LABKH63Y2XQMDHO6
+ daily:
+  historical:
+   key: TIME_SERIES_DAILY
+ search:
+  key: SYMBOL_SEARCH
