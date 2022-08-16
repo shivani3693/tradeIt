@@ -1,6 +1,7 @@
 package tradeit.shivani.shah.stocks.service;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 
@@ -54,7 +55,6 @@ public class StockService {
 		log.debug("Fetching information of all stocks");
 		TransferObject response = new TransferObject();
 		List<StockTimeline> stocks = fetchHistoricalDataForStock(code);
-		log.info("Stocks size is {}", stocks.size());
 		if (!stocks.isEmpty()) {
 			response = fetchAverageData(stocks);
 			response.setStatusCode(AppConstants.SUCCESS);
@@ -81,15 +81,22 @@ public class StockService {
 							.queryParam("symbol", code).queryParam("apikey", apiKey).build().toUriString();
 					String response = this.restTemplate.getForObject(url, String.class);
 					JSONObject jsonObject = new JSONObject(response);
+					//save all dates dta in db
 					if (jsonObject != null && !jsonObject.has(APIConstants.ERROR)
-							&& jsonObject.has(APIConstants.DAILY_TIMESERIES)
-							&& jsonObject.getJSONObject(APIConstants.DAILY_TIMESERIES).has(date)) {
-
-						StockTimeline stock = APIUtil.convertJSONToStockTimeline(
-								jsonObject.getJSONObject(APIConstants.DAILY_TIMESERIES).getJSONObject(date), date,
-								stockObj);
-						historicalStocks.add(stock);
-						stockTimelineRepository.save(stock);
+							&& jsonObject.has(APIConstants.DAILY_TIMESERIES)) {
+						Iterator<String> datesKeys = jsonObject.getJSONObject(APIConstants.DAILY_TIMESERIES).keys();
+						while(datesKeys.hasNext()) {
+						    String key = datesKeys.next();
+						    if(dates.contains(key)) {
+								StockTimeline stock = APIUtil.convertJSONToStockTimeline(
+										jsonObject.getJSONObject(APIConstants.DAILY_TIMESERIES).getJSONObject(key), date,
+										stockObj);
+								stockTimelineRepository.save(stock);
+								if(key.equals(date)) {
+									historicalStocks.add(stock);	
+								}
+							} 
+						}
 					} else {
 						log.debug("!!! No data found for {} and date {}", code, date);
 					}
@@ -135,8 +142,8 @@ public class StockService {
 			data.setCode(obj.getCode());
 			data.setName(obj.getName());
 			minimum = (minimum > obj.getLow()) ? obj.getLow() : minimum;
-			maximum = (maximum > obj.getHigh()) ? obj.getHigh() : maximum;
-			sum = sum + obj.getClose();
+			maximum = (maximum < obj.getHigh()) ? obj.getHigh() : maximum;
+			sum = sum + (obj.getLow()+obj.getHigh())/2;
 		}
 		data.setMinimum(minimum);
 		data.setMaximum(maximum);
